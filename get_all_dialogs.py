@@ -2,6 +2,7 @@ import aiohttp
 import asyncio
 import datetime
 import os
+import time
 
 import pandas as pd
 
@@ -12,8 +13,13 @@ sem = asyncio.Semaphore(3)
 async def get_response(url, headers):
     async with sem:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                return await response.json()
+            tries = 100
+            while tries > 0:
+                async with session.get(url, headers=headers) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    tries -= 1
+                    time.sleep(1)
 
 
 async def get_messages(
@@ -47,7 +53,6 @@ async def get_messages(
 
 
 async def get_contact_info(access_token, contact_ids):
-    url = ""
     url = "https://go.botmaker.com/api/v1.0/customer"
     tasks = []
     for contact_id in contact_ids:
@@ -65,7 +70,7 @@ async def get_contact_info(access_token, contact_ids):
             await task
             done_task = task.result()
             if done_task:
-                print(f"Info about {contact_id} have recieved!")
+                print(f"Info about {contact_id} has been recieved!")
                 result.append(done_task)
         except aiohttp.ContentTypeError:
             pass
