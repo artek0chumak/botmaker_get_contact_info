@@ -6,6 +6,8 @@ import time
 
 import pandas as pd
 
+from tqdm import tqdm
+
 
 sem = asyncio.Semaphore(3)
 
@@ -13,7 +15,7 @@ sem = asyncio.Semaphore(3)
 async def get_response(url, headers):
     async with sem:
         async with aiohttp.ClientSession() as session:
-            tries = 100
+            tries = 10
             while tries > 0:
                 async with session.get(url, headers=headers) as response:
                     if response.status == 200:
@@ -65,12 +67,11 @@ async def get_contact_info(access_token, contact_ids):
         tasks.append((contact_id, task))
 
     result = []
-    for contact_id, task in tasks:
+    for contact_id, task in tqdm(tasks):
         try:
             await task
             done_task = task.result()
             if done_task:
-                print(f"Info about {contact_id} has been recieved!")
                 result.append(done_task)
         except aiohttp.ContentTypeError:
             pass
@@ -80,7 +81,7 @@ async def get_contact_info(access_token, contact_ids):
 
 async def main():
     access_token = os.environ["BOTMAKER_ACCESS_TOKEN"]
-    days_range = range(14, 0, -1)
+    days_range = range(14, 7, -1)
     hours_range = range(0, 24)
     minutes_range = [0, 15, 30, 45]
     current_time = datetime.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)

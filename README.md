@@ -7,6 +7,7 @@
 - python>3.8
 - aiohttp
 - pandas
+- tqdm
 
 ## Как использовать
 
