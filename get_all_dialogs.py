@@ -2,8 +2,6 @@ import aiohttp
 import asyncio
 import datetime
 import os
-import time
-
 import pandas as pd
 
 from tqdm import tqdm
@@ -21,7 +19,7 @@ async def get_response(url, headers):
                     if response.status == 200:
                         return await response.json()
                     tries -= 1
-                    time.sleep(1)
+                    await asyncio.sleep(1)
 
 
 async def get_messages(
