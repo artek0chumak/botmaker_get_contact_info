@@ -7,10 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 
 
-sem = asyncio.Semaphore(3)
-
-
-async def get_response(url, headers):
+async def get_response(url, headers, sem):
     async with sem:
         async with aiohttp.ClientSession() as session:
             tries = 10
@@ -19,7 +16,7 @@ async def get_response(url, headers):
                     if response.status == 200:
                         return await response.json()
                     tries -= 1
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(10)
 
 
 async def get_messages(
@@ -27,6 +24,7 @@ async def get_messages(
 ):
     url = "https://go.botmaker.com/api/v1.0/message/byDateRange"
     tasks = []
+    sem = asyncio.Semaphore(10)
     for days in days_range:
         for hours in hours_range:
             for minutes in minutes_range:
@@ -38,7 +36,7 @@ async def get_messages(
                     'dateISOTo': time_to.isoformat() + ".00Z",
                     "chatPlatform": "TELEGRAM",
                 }
-                task = asyncio.create_task(get_response(url, headers))
+                task = asyncio.create_task(get_response(url, headers, sem))
                 tasks.append((time_from, time_to, task))
     
     result = []
@@ -55,13 +53,14 @@ async def get_messages(
 async def get_contact_info(access_token, contact_ids):
     url = "https://go.botmaker.com/api/v1.0/customer"
     tasks = []
+    sem = asyncio.Semaphore(2)
     for contact_id in contact_ids:
         headers={
             'access-token': access_token,
             "chatPlatform": "TELEGRAM",
             "platformContactId": contact_id,
         }
-        task = asyncio.create_task(get_response(url, headers))
+        task = asyncio.create_task(get_response(url, headers, sem))
         tasks.append((contact_id, task))
 
     result = []
@@ -71,7 +70,10 @@ async def get_contact_info(access_token, contact_ids):
             done_task = task.result()
             if done_task:
                 result.append(done_task)
-        except aiohttp.ContentTypeError:
+            else:
+                print(f"Nothing for {contact_id}")
+        except:
+            print(f"Error for {contact_id}")
             pass
 
     return result
